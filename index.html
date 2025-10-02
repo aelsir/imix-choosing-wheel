@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IMIX Random Name Picker</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0f2f5;
+        }
+        /* Custom styles for the wheel pointer */
+        .wheel-pointer {
+            width: 0;
+            height: 0;
+            border-left: 15px solid transparent;
+            border-right: 15px solid transparent;
+            border-top: 30px solid #eb5587; /* IMIX brand color */
+            position: absolute;
+            top: -10px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 10;
+            filter: drop-shadow(0 2px 2px rgba(0,0,0,0.2));
+        }
+        canvas {
+            transition: transform 5s cubic-bezier(0.25, 1, 0.5, 1);
+        }
+    </style>
+</head>
+<body class="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4">
+
+    <!-- Main Container -->
+    <div class="w-full max-w-4xl mx-auto bg-white p-6 sm:p-8 rounded-2xl shadow-lg">
+        <div class="flex flex-col lg:flex-row gap-8">
+
+            <!-- Left Side: Controls & Branding -->
+            <div class="lg:w-1/3 flex flex-col">
+                <header class="mb-6 text-center">
+                    <img src="https://imix.org.uk/app/uploads/2024/04/imix_logo-125x51-c-default.png" alt="IMIX Logo" class="mx-auto mb-4">
+                    <h1 class="text-2xl font-bold text-gray-800">Random Name Picker</h1>
+                </header>
+
+                <div class="flex-grow flex flex-col">
+                    <label for="names" class="text-sm font-semibold text-gray-600 mb-2">Enter names (one per line):</label>
+                    <textarea id="names" class="w-full flex-grow text-lg p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#eb5587] focus:border-[#eb5587] transition" rows="8">Sarah
+David
+Emily
+Michael
+Jessica
+Chris
+Laura
+Omer
+Ahmed</textarea>
+                </div>
+                 <button id="spinBtn" class="w-full mt-6 bg-[#eb5587] text-white font-bold text-xl py-4 px-6 rounded-xl hover:bg-[#d44a78] focus:outline-none focus:ring-4 focus:ring-[#eb5587]/50 transition-all duration-300 ease-in-out transform hover:scale-105 shadow-md">
+                    Spin the Wheel!
+                </button>
+            </div>
+
+            <!-- Right Side: The Wheel -->
+            <div class="lg:w-2/3 flex items-center justify-center">
+                <div class="relative w-full max-w-[400px] sm:max-w-[450px] aspect-square">
+                    <div class="wheel-pointer"></div>
+                    <div class="w-full h-full">
+                        <canvas id="wheelCanvas" width="500" height="500"></canvas>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="text-center mt-6 text-gray-500 text-sm">
+        <p>A fun tool by IMIX</p>
+    </footer>
+
+    <script>
+        // DOM Elements
+        const canvas = document.getElementById('wheelCanvas');
+        const ctx = canvas.getContext('2d');
+        const namesTextarea = document.getElementById('names');
+        const spinBtn = document.getElementById('spinBtn');
+
+        // Wheel properties
+        const colors = ["#FFC107", "#4CAF50", "#2196F3", "#9C27B0", "#F44336", "#FF9800", "#00BCD4", "#E91E63"];
+        let currentRotation = 0;
+        let isSpinning = false;
+        
+        // Get names from textarea
+        const getNames = () => {
+            return namesTextarea.value.split('\n').map(name => name.trim()).filter(name => name !== '');
+        };
+        
+        // Function to draw the wheel
+        const drawWheel = () => {
+            const names = getNames();
+            const numSegments = names.length;
+            if (numSegments === 0) {
+                 // Draw a placeholder if no names
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.beginPath();
+                ctx.arc(250, 250, 240, 0, Math.PI * 2);
+                ctx.fillStyle = '#E0E0E0';
+                ctx.fill();
+                ctx.fillStyle = '#666';
+                ctx.font = 'bold 24px Inter';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText('Add some names to spin!', 250, 250);
+                return;
+            };
+
+            const arcSize = (2 * Math.PI) / numSegments;
+            const centerX = canvas.width / 2;
+            const centerY = canvas.height / 2;
+            const radius = canvas.width / 2 - 10;
+
+            // Clear canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.strokeStyle = 'white';
+            ctx.lineWidth = 3;
+            ctx.font = 'bold 20px Inter';
+
+            // Draw each segment
+            names.forEach((name, i) => {
+                const angle = i * arcSize;
+                
+                // Draw segment
+                ctx.beginPath();
+                ctx.fillStyle = colors[i % colors.length];
+                ctx.moveTo(centerX, centerY);
+                ctx.arc(centerX, centerY, radius, angle, angle + arcSize);
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+
+                // Draw text
+                ctx.save();
+                ctx.fillStyle = "white";
+                ctx.translate(centerX, centerY);
+                ctx.rotate(angle + arcSize / 2);
+                ctx.textAlign = "right";
+                ctx.textBaseline = "middle";
+                
+                const text = name.length > 15 ? name.substring(0, 14) + '...' : name;
+                ctx.fillText(text, radius - 15, 0);
+                ctx.restore();
+            });
+        };
+
+        // Function to spin the wheel
+        const spin = () => {
+            if (isSpinning) return;
+            const names = getNames();
+            if (names.length < 2) {
+                // Silently return if not enough names
+                return;
+            }
+            isSpinning = true;
+            spinBtn.disabled = true;
+            spinBtn.textContent = 'Spinning...';
+
+            // Random rotation: at least 5 full spins + a random amount
+            const randomExtraRotation = Math.random() * 360;
+            const totalRotation = 5 * 360 + randomExtraRotation;
+
+            currentRotation += totalRotation;
+            canvas.style.transform = `rotate(${currentRotation}deg)`;
+            
+            // Determine winner after transition ends
+            setTimeout(() => {
+                isSpinning = false;
+                spinBtn.disabled = false;
+                spinBtn.textContent = 'Spin the Wheel!';
+            }, 5000); // Corresponds to the transition duration in CSS
+        };
+
+
+        // Event Listeners
+        spinBtn.addEventListener('click', spin);
+        namesTextarea.addEventListener('input', drawWheel);
+
+        // Initial draw
+        drawWheel();
+
+    </script>
+</body>
+</html>
+
